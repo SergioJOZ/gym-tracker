@@ -47,6 +47,7 @@ func main() {
 	userRepo := postgres.NewUserRepository(db)
 	tokenRepo := postgres.NewRefreshTokenRepository(db)
 	exerciseRepo := postgres.NewExerciseRepository(db)
+	templateRepo := postgres.NewTemplateRepository(db)
 
 	// Initialize JWT config
 	jwtCfg := &jwtPkg.Config{
@@ -59,14 +60,16 @@ func main() {
 	// Initialize use cases
 	authUC := usecase.NewAuthUseCase(userRepo, tokenRepo, jwtCfg)
 	exerciseUC := usecase.NewExerciseUseCase(exerciseRepo)
+	templateUC := usecase.NewTemplateUseCase(templateRepo, exerciseRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authUC)
 	exerciseHandler := handler.NewExerciseHandler(exerciseUC)
+	templateHandler := handler.NewTemplateHandler(templateUC)
 	mediaHandler := handler.NewMediaHandler(cfg.Media.RootDir, cfg.Media.GIFsDir, cfg.Media.ThumbnailsDir)
 
 	// Setup router
-	r := setupRouter(authHandler, exerciseHandler, mediaHandler, jwtCfg)
+	r := setupRouter(authHandler, exerciseHandler, templateHandler, mediaHandler, jwtCfg)
 
 	// Start server
 	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
@@ -79,6 +82,7 @@ func main() {
 func setupRouter(
 	authHandler *handler.AuthHandler,
 	exerciseHandler *handler.ExerciseHandler,
+	templateHandler *handler.TemplateHandler,
 	mediaHandler *handler.MediaHandler,
 	jwtCfg *jwtPkg.Config,
 ) *chi.Mux {
@@ -111,6 +115,13 @@ func setupRouter(
 			// Exercise routes (protected)
 			r.Get("/exercises", exerciseHandler.List)
 			r.Get("/exercises/{id}", exerciseHandler.GetByID)
+
+			// Template routes (protected)
+			r.Post("/templates", templateHandler.Create)
+			r.Get("/templates", templateHandler.List)
+			r.Get("/templates/{id}", templateHandler.GetByID)
+			r.Put("/templates/{id}", templateHandler.Update)
+			r.Delete("/templates/{id}", templateHandler.Delete)
 		})
 	})
 
