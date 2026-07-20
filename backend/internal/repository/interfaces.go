@@ -138,3 +138,28 @@ type PersonalRecordRepository interface {
 	// This deletes existing PRs for those exercises and re-inserts from session data.
 	RecalculateFromSessions(ctx context.Context, userID uuid.UUID, exerciseIDs []uuid.UUID) error
 }
+
+// ProgressSummary represents aggregate statistics for a user's progress.
+type ProgressSummary struct {
+	TotalSessions      int `json:"total_sessions"`
+	TotalWorkouts      int `json:"total_workouts"`
+	TotalExercises     int `json:"total_exercises"`
+	TotalTime          int `json:"total_time"`           // in seconds
+	AvgSessionDuration int `json:"avg_session_duration"` // in seconds
+}
+
+// ProgressFilter defines filtering criteria for progress queries.
+type ProgressFilter struct {
+	Cursor string // opaque cursor for pagination
+	Limit  int    // page size
+}
+
+// ProgressRepository defines the interface for progress and history persistence operations.
+type ProgressRepository interface {
+	// ExerciseHistory retrieves paginated session sets for a specific exercise, ordered by session start_at DESC.
+	// Returns a slice of sets, whether more results exist, and error.
+	ExerciseHistory(ctx context.Context, userID, exerciseID uuid.UUID, cursor string, limit int) ([]*domain.SessionSet, bool, error)
+
+	// Summary retrieves aggregate statistics for a user's progress.
+	Summary(ctx context.Context, userID uuid.UUID) (*ProgressSummary, error)
+}
