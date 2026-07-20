@@ -46,6 +46,7 @@ func main() {
 	// Initialize repositories
 	userRepo := postgres.NewUserRepository(db)
 	tokenRepo := postgres.NewRefreshTokenRepository(db)
+	exerciseRepo := postgres.NewExerciseRepository(db)
 
 	// Initialize JWT config
 	jwtCfg := &jwtPkg.Config{
@@ -57,12 +58,15 @@ func main() {
 
 	// Initialize use cases
 	authUC := usecase.NewAuthUseCase(userRepo, tokenRepo, jwtCfg)
+	exerciseUC := usecase.NewExerciseUseCase(exerciseRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authUC)
+	exerciseHandler := handler.NewExerciseHandler(exerciseUC)
+	mediaHandler := handler.NewMediaHandler(cfg.Media.RootDir, cfg.Media.GIFsDir, cfg.Media.ThumbnailsDir)
 
 	// Setup router
-	r := setupRouter(authHandler, jwtCfg)
+	r := setupRouter(authHandler, exerciseHandler, mediaHandler, jwtCfg)
 
 	// Start server
 	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
@@ -72,7 +76,12 @@ func main() {
 	}
 }
 
-func setupRouter(authHandler *handler.AuthHandler, jwtCfg *jwtPkg.Config) *chi.Mux {
+func setupRouter(
+	authHandler *handler.AuthHandler,
+	exerciseHandler *handler.ExerciseHandler,
+	mediaHandler *handler.MediaHandler,
+	jwtCfg *jwtPkg.Config,
+) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Middleware chain
@@ -93,13 +102,22 @@ func setupRouter(authHandler *handler.AuthHandler, jwtCfg *jwtPkg.Config) *chi.M
 		r.Group(func(r chi.Router) {
 			r.Use(middlewares.AuthMiddleware(jwtCfg))
 
-			// Add protected routes here as they are implemented
-			// For now, just a health check
+			// Health check
 			r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte(`{"status":"ok"}`))
 			})
+
+			// Exercise routes (protected)
+			r.Get("/exercises", exerciseHandler.List)
+			r.Get("/exercises/{id}", exerciseHandler.GetByID)
 		})
+	})
+
+	// Media routes (public, no auth required)
+	r.Route("/media", func(r chi.Router) {
+		r.Get("/gifs/{filename}", mediaHandler.ServeGIF)
+		r.Get("/thumbnails/{filename}", mediaHandler.ServeThumbnail)
 	})
 
 	return r
