@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/sergiojoz/gym-tracker/internal/domain"
@@ -90,4 +91,50 @@ type TemplateRepository interface {
 	// List retrieves templates for a user with cursor-based pagination.
 	// Returns a slice of templates (with slots), whether more results exist, and error.
 	List(ctx context.Context, userID uuid.UUID, filter TemplateFilter) ([]*domain.WorkoutTemplate, bool, error)
+}
+
+// SessionFilter defines filtering criteria for listing workout sessions.
+type SessionFilter struct {
+	Cursor   string     // opaque cursor for pagination (start_at DESC)
+	Limit    int        // page size
+	StartDate *time.Time // optional: filter sessions starting on or after this date
+	EndDate   *time.Time // optional: filter sessions starting before this date
+}
+
+// SessionRepository defines the interface for workout session persistence operations.
+type SessionRepository interface {
+	// Create persists a new workout session with its exercises and sets in a single transaction.
+	Create(ctx context.Context, session *domain.WorkoutSession) error
+
+	// Update replaces a session and its exercises/sets in a single transaction.
+	Update(ctx context.Context, session *domain.WorkoutSession) error
+
+	// Delete removes a session owned by the given user.
+	// Returns domain.ErrNotFound if the session doesn't exist.
+	Delete(ctx context.Context, userID, sessionID uuid.UUID) error
+
+	// FindByID retrieves a session with its exercises and sets, scoped to the given user.
+	// Returns domain.ErrNotFound if the session doesn't exist.
+	FindByID(ctx context.Context, userID, sessionID uuid.UUID) (*domain.WorkoutSession, error)
+
+	// List retrieves sessions for a user with cursor-based pagination and optional date filtering.
+	// Returns a slice of sessions (with nested data), whether more results exist, and error.
+	List(ctx context.Context, userID uuid.UUID, filter SessionFilter) ([]*domain.WorkoutSession, bool, error)
+}
+
+// PersonalRecordRepository defines the interface for personal record persistence operations.
+type PersonalRecordRepository interface {
+	// Upsert inserts or updates a personal record using GREATEST to preserve the best values.
+	Upsert(ctx context.Context, pr *domain.PersonalRecord) error
+
+	// FindByUserAndExercise retrieves a personal record for a specific user and exercise.
+	// Returns domain.ErrNotFound if no record exists.
+	FindByUserAndExercise(ctx context.Context, userID, exerciseID uuid.UUID) (*domain.PersonalRecord, error)
+
+	// FindByUser retrieves all personal records for a user.
+	FindByUser(ctx context.Context, userID uuid.UUID) ([]*domain.PersonalRecord, error)
+
+	// RecalculateFromSessions recalculates personal records from all sessions for the given user and exercises.
+	// This deletes existing PRs for those exercises and re-inserts from session data.
+	RecalculateFromSessions(ctx context.Context, userID uuid.UUID, exerciseIDs []uuid.UUID) error
 }
