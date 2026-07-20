@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	httpSwagger "github.com/swaggo/http-swagger"
 	"github.com/sergiojoz/gym-tracker/configs"
 	"github.com/sergiojoz/gym-tracker/internal/handler"
 	"github.com/sergiojoz/gym-tracker/internal/repository/postgres"
@@ -75,9 +76,20 @@ func main() {
 	// Setup router
 	r := handler.SetupRouter(authHandler, exerciseHandler, templateHandler, sessionHandler, progressHandler, mediaHandler, jwtCfg)
 
+	// Serve Swagger UI
+	r.Get("/swagger/*", httpSwagger.Handler(
+		httpSwagger.URL("/swagger/doc.yaml"),
+	))
+
+	// Serve swagger spec file
+	r.Get("/swagger/doc.yaml", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "docs/swagger.yaml")
+	})
+
 	// Start server
 	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
 	log.Printf("server starting on %s", addr)
+	log.Printf("swagger UI available at http://%s/swagger/index.html", addr)
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatalf("server failed: %v", err)
 	}
