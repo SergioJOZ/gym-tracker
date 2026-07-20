@@ -16,6 +16,7 @@ type MockExerciseRepository struct {
 	ListFunc      func(ctx context.Context, filter repository.ExerciseFilter) ([]*domain.Exercise, bool, error)
 	GetByIDFunc   func(ctx context.Context, id uuid.UUID) (*domain.Exercise, error)
 	BulkUpsertFunc func(ctx context.Context, exercises []*domain.Exercise) error
+	ExistsFunc    func(ctx context.Context, id uuid.UUID) (bool, error)
 }
 
 func (m *MockExerciseRepository) List(ctx context.Context, filter repository.ExerciseFilter) ([]*domain.Exercise, bool, error) {
@@ -28,6 +29,13 @@ func (m *MockExerciseRepository) GetByID(ctx context.Context, id uuid.UUID) (*do
 
 func (m *MockExerciseRepository) BulkUpsert(ctx context.Context, exercises []*domain.Exercise) error {
 	return m.BulkUpsertFunc(ctx, exercises)
+}
+
+func (m *MockExerciseRepository) Exists(ctx context.Context, id uuid.UUID) (bool, error) {
+	if m.ExistsFunc != nil {
+		return m.ExistsFunc(ctx, id)
+	}
+	return false, nil
 }
 
 func TestExerciseUseCase_List_Success(t *testing.T) {
