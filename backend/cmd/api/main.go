@@ -48,6 +48,8 @@ func main() {
 	tokenRepo := postgres.NewRefreshTokenRepository(db)
 	exerciseRepo := postgres.NewExerciseRepository(db)
 	templateRepo := postgres.NewTemplateRepository(db)
+	sessionRepo := postgres.NewSessionRepository(db)
+	prRepo := postgres.NewPersonalRecordRepository(db)
 
 	// Initialize JWT config
 	jwtCfg := &jwtPkg.Config{
@@ -61,15 +63,17 @@ func main() {
 	authUC := usecase.NewAuthUseCase(userRepo, tokenRepo, jwtCfg)
 	exerciseUC := usecase.NewExerciseUseCase(exerciseRepo)
 	templateUC := usecase.NewTemplateUseCase(templateRepo, exerciseRepo)
+	sessionUC := usecase.NewSessionUseCase(sessionRepo, prRepo)
 
 	// Initialize handlers
 	authHandler := handler.NewAuthHandler(authUC)
 	exerciseHandler := handler.NewExerciseHandler(exerciseUC)
 	templateHandler := handler.NewTemplateHandler(templateUC)
+	sessionHandler := handler.NewSessionHandler(sessionUC)
 	mediaHandler := handler.NewMediaHandler(cfg.Media.RootDir, cfg.Media.GIFsDir, cfg.Media.ThumbnailsDir)
 
 	// Setup router
-	r := setupRouter(authHandler, exerciseHandler, templateHandler, mediaHandler, jwtCfg)
+	r := setupRouter(authHandler, exerciseHandler, templateHandler, sessionHandler, mediaHandler, jwtCfg)
 
 	// Start server
 	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
@@ -83,6 +87,7 @@ func setupRouter(
 	authHandler *handler.AuthHandler,
 	exerciseHandler *handler.ExerciseHandler,
 	templateHandler *handler.TemplateHandler,
+	sessionHandler *handler.SessionHandler,
 	mediaHandler *handler.MediaHandler,
 	jwtCfg *jwtPkg.Config,
 ) *chi.Mux {
@@ -122,6 +127,13 @@ func setupRouter(
 			r.Get("/templates/{id}", templateHandler.GetByID)
 			r.Put("/templates/{id}", templateHandler.Update)
 			r.Delete("/templates/{id}", templateHandler.Delete)
+
+			// Session routes (protected)
+			r.Post("/sessions", sessionHandler.Create)
+			r.Get("/sessions", sessionHandler.List)
+			r.Get("/sessions/{id}", sessionHandler.GetByID)
+			r.Put("/sessions/{id}", sessionHandler.Update)
+			r.Delete("/sessions/{id}", sessionHandler.Delete)
 		})
 	})
 
