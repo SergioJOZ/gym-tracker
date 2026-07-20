@@ -60,4 +60,34 @@ type ExerciseRepository interface {
 
 	// BulkUpsert inserts or updates a batch of exercises (for seeding).
 	BulkUpsert(ctx context.Context, exercises []*domain.Exercise) error
+
+	// Exists checks whether an exercise with the given ID exists.
+	Exists(ctx context.Context, id uuid.UUID) (bool, error)
+}
+
+// TemplateFilter defines filtering criteria for listing templates.
+type TemplateFilter struct {
+	Cursor string // opaque cursor for pagination (created_at DESC)
+	Limit  int    // page size
+}
+
+// TemplateRepository defines the interface for workout template persistence operations.
+type TemplateRepository interface {
+	// Create persists a new workout template with its slots.
+	Create(ctx context.Context, template *domain.WorkoutTemplate) error
+
+	// Update replaces a template and its slots in a single transaction.
+	Update(ctx context.Context, template *domain.WorkoutTemplate) error
+
+	// Delete removes a template owned by the given user.
+	// Returns domain.ErrNotFound if the template doesn't exist.
+	Delete(ctx context.Context, userID, templateID uuid.UUID) error
+
+	// FindByID retrieves a template with its slots, scoped to the given user.
+	// Returns domain.ErrNotFound if the template doesn't exist.
+	FindByID(ctx context.Context, userID, templateID uuid.UUID) (*domain.WorkoutTemplate, error)
+
+	// List retrieves templates for a user with cursor-based pagination.
+	// Returns a slice of templates (with slots), whether more results exist, and error.
+	List(ctx context.Context, userID uuid.UUID, filter TemplateFilter) ([]*domain.WorkoutTemplate, bool, error)
 }

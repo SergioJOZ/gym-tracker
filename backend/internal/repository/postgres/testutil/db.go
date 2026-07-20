@@ -64,7 +64,7 @@ func (tdb *TestDB) Cleanup(t *testing.T) {
 	t.Helper()
 	defer tdb.DB.Close()
 
-	tables := []string{"exercises", "refresh_tokens", "users"}
+	tables := []string{"template_slots", "workout_templates", "exercises", "refresh_tokens", "users"}
 	for _, table := range tables {
 		_, err := tdb.DB.Exec(fmt.Sprintf("TRUNCATE TABLE %s CASCADE", table))
 		if err != nil {

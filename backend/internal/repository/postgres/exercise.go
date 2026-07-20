@@ -190,3 +190,13 @@ func (r *ExerciseRepository) List(ctx context.Context, filter repository.Exercis
 
 	return exercises, hasMore, nil
 }
+
+// Exists checks whether an exercise with the given ID exists.
+func (r *ExerciseRepository) Exists(ctx context.Context, id uuid.UUID) (bool, error) {
+	var exists bool
+	err := r.db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM exercises WHERE id = $1)", id).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
