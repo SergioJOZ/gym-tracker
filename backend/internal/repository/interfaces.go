@@ -36,3 +36,28 @@ type RefreshTokenRepository interface {
 	// RevokeAllForUser revokes all refresh tokens for a given user.
 	RevokeAllForUser(ctx context.Context, userID uuid.UUID) error
 }
+
+// ExerciseFilter defines filtering criteria for listing exercises.
+type ExerciseFilter struct {
+	Search      string // full-text search query
+	MuscleGroup string // filter by muscle group
+	Equipment   string // filter by equipment type
+	Difficulty  string // filter by difficulty level
+	Category    string // filter by category
+	Cursor      string // opaque cursor for pagination
+	Limit       int    // page size
+}
+
+// ExerciseRepository defines the interface for exercise persistence operations.
+type ExerciseRepository interface {
+	// List retrieves exercises matching the filter with cursor-based pagination.
+	// Returns a slice of exercises and whether more results exist.
+	List(ctx context.Context, filter ExerciseFilter) ([]*domain.Exercise, bool, error)
+
+	// GetByID retrieves an exercise by its ID.
+	// Returns domain.ErrNotFound if the exercise doesn't exist.
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.Exercise, error)
+
+	// BulkUpsert inserts or updates a batch of exercises (for seeding).
+	BulkUpsert(ctx context.Context, exercises []*domain.Exercise) error
+}
