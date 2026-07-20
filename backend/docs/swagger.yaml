@@ -1,0 +1,1284 @@
+openapi: 3.0.3
+info:
+  title: Gym Tracker API
+  description: API for tracking workouts, exercises, and progress
+  version: 1.0.0
+  contact:
+    name: Gym Tracker Team
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+
+tags:
+  - name: auth
+    description: Authentication endpoints
+  - name: exercises
+    description: Exercise catalog
+  - name: templates
+    description: Workout templates
+  - name: sessions
+    description: Workout sessions
+  - name: progress
+    description: Progress tracking and statistics
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - auth
+      summary: Register a new user
+      description: Create a new user account with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags:
+        - auth
+      summary: Login user
+      description: Authenticate user with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/refresh:
+    post:
+      tags:
+        - auth
+      summary: Refresh access token
+      description: Get a new access token using refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags:
+        - auth
+      summary: Logout user
+      description: Revoke the refresh token
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '204':
+          description: Logout successful
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /exercises:
+    get:
+      tags:
+        - exercises
+      summary: List exercises
+      description: Get paginated list of exercises with optional filters
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+          description: Number of items per page
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search term for exercise name
+        - name: muscle_group
+          in: query
+          schema:
+            type: string
+          description: Filter by muscle group
+        - name: equipment
+          in: query
+          schema:
+            type: string
+          description: Filter by equipment type
+        - name: difficulty
+          in: query
+          schema:
+            type: string
+            enum: [beginner, intermediate, advanced]
+          description: Filter by difficulty level
+      responses:
+        '200':
+          description: List of exercises
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /exercises/{id}:
+    get:
+      tags:
+        - exercises
+      summary: Get exercise by ID
+      description: Get detailed information about a specific exercise
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Exercise ID
+      responses:
+        '200':
+          description: Exercise details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exercise'
+        '404':
+          description: Exercise not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /templates:
+    get:
+      tags:
+        - templates
+      summary: List workout templates
+      description: Get paginated list of user's workout templates
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+          description: Number of items per page
+      responses:
+        '200':
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - templates
+      summary: Create workout template
+      description: Create a new workout template with exercises
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTemplateRequest'
+      responses:
+        '201':
+          description: Template created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /templates/{id}:
+    get:
+      tags:
+        - templates
+      summary: Get template by ID
+      description: Get detailed information about a specific template
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Template ID
+      responses:
+        '200':
+          description: Template details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '404':
+          description: Template not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - templates
+      summary: Update template
+      description: Update an existing workout template
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Template ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTemplateRequest'
+      responses:
+        '200':
+          description: Template updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Template not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - templates
+      summary: Delete template
+      description: Delete a workout template
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Template ID
+      responses:
+        '204':
+          description: Template deleted successfully
+        '404':
+          description: Template not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sessions:
+    get:
+      tags:
+        - sessions
+      summary: List workout sessions
+      description: Get paginated list of user's workout sessions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+          description: Number of items per page
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter sessions from this date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter sessions until this date
+      responses:
+        '200':
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - sessions
+      summary: Create workout session
+      description: Log a new workout session with exercises and sets
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+      responses:
+        '201':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sessions/{id}:
+    get:
+      tags:
+        - sessions
+      summary: Get session by ID
+      description: Get detailed information about a specific workout session
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Session ID
+      responses:
+        '200':
+          description: Session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - sessions
+      summary: Update session
+      description: Update an existing workout session
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Session ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSessionRequest'
+      responses:
+        '200':
+          description: Session updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - sessions
+      summary: Delete session
+      description: Delete a workout session
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Session ID
+      responses:
+        '204':
+          description: Session deleted successfully
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /progress/records:
+    get:
+      tags:
+        - progress
+      summary: Get personal records
+      description: Get all personal records for the authenticated user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of personal records
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonalRecordListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /progress/exercises/{exercise_id}/history:
+    get:
+      tags:
+        - progress
+      summary: Get exercise history
+      description: Get historical data for a specific exercise
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: exercise_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Exercise ID
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+          description: Number of items per page
+      responses:
+        '200':
+          description: Exercise history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseHistoryResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /progress/summary:
+    get:
+      tags:
+        - progress
+      summary: Get progress summary
+      description: Get summary statistics for the authenticated user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Progress summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressSummary'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: password123
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          example: password123
+
+    RefreshRequest:
+      type: object
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    LogoutRequest:
+      type: object
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        access_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refresh_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        expires_in:
+          type: integer
+          example: 3600
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Invalid request
+        message:
+          type: string
+          example: Email is required
+
+    Exercise:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Bench Press
+        description:
+          type: string
+          example: A compound exercise targeting the chest
+        muscle_group:
+          type: string
+          example: chest
+        equipment:
+          type: string
+          example: barbell
+        difficulty:
+          type: string
+          enum: [beginner, intermediate, advanced]
+          example: intermediate
+        category:
+          type: string
+          example: strength
+        gif_url:
+          type: string
+          format: uri
+          example: /media/gifs/bench_press.gif
+        thumbnail_url:
+          type: string
+          format: uri
+          example: /media/thumbnails/bench_press.jpg
+
+    ExerciseListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Exercise'
+        next_cursor:
+          type: string
+          nullable: true
+          example: eyJpZCI6IjEyMyJ9
+        has_more:
+          type: boolean
+          example: true
+
+    TemplateSlot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        exercise_id:
+          type: string
+          format: uuid
+        order:
+          type: integer
+          example: 0
+        target_sets:
+          type: integer
+          example: 3
+        target_reps:
+          type: integer
+          example: 10
+        target_weight:
+          type: number
+          format: float
+          nullable: true
+          example: 80.0
+        target_duration:
+          type: integer
+          nullable: true
+          description: Duration in seconds
+          example: 60
+
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Push Day
+        description:
+          type: string
+          example: Chest and shoulders workout
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateSlot'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TemplateListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Template'
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+
+    CreateTemplateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: Push Day
+        description:
+          type: string
+          example: Chest and shoulders workout
+        slots:
+          type: array
+          items:
+            type: object
+            required:
+              - exercise_id
+              - order
+            properties:
+              exercise_id:
+                type: string
+                format: uuid
+              order:
+                type: integer
+              target_sets:
+                type: integer
+              target_reps:
+                type: integer
+              target_weight:
+                type: number
+                format: float
+              target_duration:
+                type: integer
+
+    UpdateTemplateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        slots:
+          type: array
+          items:
+            type: object
+            required:
+              - exercise_id
+              - order
+            properties:
+              exercise_id:
+                type: string
+                format: uuid
+              order:
+                type: integer
+              target_sets:
+                type: integer
+              target_reps:
+                type: integer
+              target_weight:
+                type: number
+                format: float
+              target_duration:
+                type: integer
+
+    SessionSet:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        order:
+          type: integer
+          example: 0
+        weight:
+          type: number
+          format: float
+          nullable: true
+          example: 80.0
+        reps:
+          type: integer
+          nullable: true
+          example: 10
+        duration:
+          type: integer
+          nullable: true
+          description: Duration in seconds
+          example: 60
+        rpe:
+          type: number
+          format: float
+          nullable: true
+          example: 8.0
+
+    SessionExercise:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        exercise_id:
+          type: string
+          format: uuid
+        order:
+          type: integer
+          example: 0
+        notes:
+          type: string
+          nullable: true
+        sets:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionSet'
+
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        template_id:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+          example: Morning Push
+        notes:
+          type: string
+          nullable: true
+          example: Felt strong today
+        start_at:
+          type: string
+          format: date-time
+        end_at:
+          type: string
+          format: date-time
+          nullable: true
+        exercises:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionExercise'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    SessionListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Session'
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+
+    CreateSessionRequest:
+      type: object
+      required:
+        - name
+        - start_at
+        - exercises
+      properties:
+        template_id:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+          example: Morning Push
+        notes:
+          type: string
+          nullable: true
+        start_at:
+          type: string
+          format: date-time
+        end_at:
+          type: string
+          format: date-time
+          nullable: true
+        exercises:
+          type: array
+          items:
+            type: object
+            required:
+              - exercise_id
+              - order
+              - sets
+            properties:
+              exercise_id:
+                type: string
+                format: uuid
+              order:
+                type: integer
+              notes:
+                type: string
+                nullable: true
+              sets:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - order
+                  properties:
+                    order:
+                      type: integer
+                    weight:
+                      type: number
+                      format: float
+                    reps:
+                      type: integer
+                    duration:
+                      type: integer
+                    rpe:
+                      type: number
+                      format: float
+
+    UpdateSessionRequest:
+      type: object
+      properties:
+        template_id:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        start_at:
+          type: string
+          format: date-time
+        end_at:
+          type: string
+          format: date-time
+          nullable: true
+        exercises:
+          type: array
+          items:
+            type: object
+            required:
+              - exercise_id
+              - order
+              - sets
+            properties:
+              exercise_id:
+                type: string
+                format: uuid
+              order:
+                type: integer
+              notes:
+                type: string
+                nullable: true
+              sets:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - order
+                  properties:
+                    order:
+                      type: integer
+                    weight:
+                      type: number
+                      format: float
+                    reps:
+                      type: integer
+                    duration:
+                      type: integer
+                    rpe:
+                      type: number
+                      format: float
+
+    PersonalRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        exercise_id:
+          type: string
+          format: uuid
+        max_weight:
+          type: number
+          format: float
+          example: 100.0
+        max_reps:
+          type: integer
+          example: 10
+        max_volume:
+          type: number
+          format: float
+          example: 1000.0
+        updated_at:
+          type: string
+          format: date-time
+
+    PersonalRecordListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonalRecord'
+
+    ExerciseHistoryResponse:
+      type: object
+      properties:
+        exercise:
+          $ref: '#/components/schemas/Exercise'
+        sessions:
+          type: array
+          items:
+            type: object
+            properties:
+              session_id:
+                type: string
+                format: uuid
+              date:
+                type: string
+                format: date-time
+              sets:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    weight:
+                      type: number
+                      format: float
+                    reps:
+                      type: integer
+                    volume:
+                      type: number
+                      format: float
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+
+    ProgressSummary:
+      type: object
+      properties:
+        total_sessions:
+          type: integer
+          example: 45
+        total_workouts:
+          type: integer
+          example: 120
+        total_exercises:
+          type: integer
+          example: 25
+        total_time:
+          type: integer
+          description: Total time in seconds
+          example: 36000
+        avg_session_duration:
+          type: integer
+          description: Average session duration in seconds
+          example: 4800
+        most_used_exercise:
+          type: string
+          example: Bench Press
+        heaviest_weight:
+          type: number
+          format: float
+          example: 120.0
