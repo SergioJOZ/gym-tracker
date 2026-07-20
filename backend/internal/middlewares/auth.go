@@ -54,6 +54,11 @@ func UserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
 	return userID, ok
 }
 
+// ContextWithUserID creates a new context with the user ID set (for testing).
+func ContextWithUserID(ctx context.Context, userID uuid.UUID) context.Context {
+	return context.WithValue(ctx, userIDKey, userID)
+}
+
 // extractToken extracts the token from the Authorization header.
 func extractToken(authHeader string) string {
 	if authHeader == "" {

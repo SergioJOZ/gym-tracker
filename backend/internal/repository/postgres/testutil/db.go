@@ -42,7 +42,7 @@ func NewTestDB(t *testing.T) *TestDB {
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://../../migrations",
+		"file://../../../migrations",
 		"postgres", driver)
 	if err != nil {
 		t.Fatalf("failed to create migrate instance: %v", err)
@@ -64,7 +64,7 @@ func (tdb *TestDB) Cleanup(t *testing.T) {
 	t.Helper()
 	defer tdb.DB.Close()
 
-	tables := []string{"refresh_tokens", "users"}
+	tables := []string{"template_slots", "workout_templates", "exercises", "refresh_tokens", "users"}
 	for _, table := range tables {
 		_, err := tdb.DB.Exec(fmt.Sprintf("TRUNCATE TABLE %s CASCADE", table))
 		if err != nil {
