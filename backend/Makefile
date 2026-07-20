@@ -3,8 +3,9 @@ APP_NAME=gym-tracker
 MAIN_PATH=./cmd/api
 MIGRATE_PATH=./migrations
 DB_URL=postgresql://postgres:password@localhost:5432/gym-tracker?sslmode=disable
+TEST_DB_URL=postgresql://postgres:password@localhost:5432/gym-tracker-test?sslmode=disable
 
-.PHONY: run build test lint migrate-up migrate-down generate tidy help
+.PHONY: run build test test-integration lint migrate-up migrate-down generate tidy help seed docker-build docker-run
 
 ## run: correr la aplicación
 run:
@@ -17,6 +18,10 @@ build:
 ## test: correr todos los tests con race detector
 test:
 	go test -race -cover ./...
+
+## test-integration: correr tests de integración con TEST_DATABASE_URL
+test-integration:
+	TEST_DATABASE_URL=$(TEST_DB_URL) go test -race -cover ./internal/repository/postgres/... -v
 
 ## lint: analizar el código con golangci-lint
 lint:
@@ -38,6 +43,18 @@ generate:
 tidy:
 	go mod tidy
 	go mod verify
+
+## seed: correr el script de seed
+seed:
+	go run ./cmd/seed
+
+## docker-build: construir la imagen Docker
+docker-build:
+	docker build -t $(APP_NAME) .
+
+## docker-run: correr el contenedor Docker
+docker-run:
+	docker run -p 8080:8080 --env-file .env $(APP_NAME)
 
 ## help: mostrar este menú
 help:
