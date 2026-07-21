@@ -5,6 +5,7 @@ import '../models/models.dart';
 abstract final class MockData {
   static const List<Routine> routines = [
     Routine(
+      id: 'routine-push-day',
       name: 'Push Day',
       lastPerformedLabel: '2 days ago',
       estimatedMinutes: 45,
@@ -36,6 +37,7 @@ abstract final class MockData {
       ],
     ),
     Routine(
+      id: 'routine-pull-day',
       name: 'Pull Day',
       lastPerformedLabel: '4 days ago',
       estimatedMinutes: 50,
@@ -73,6 +75,7 @@ abstract final class MockData {
       ],
     ),
     Routine(
+      id: 'routine-legs',
       name: 'Legs',
       lastPerformedLabel: '6 days ago',
       estimatedMinutes: 55,
@@ -106,40 +109,20 @@ abstract final class MockData {
   ];
 
   static const List<Exercise> exerciseCatalog = [
-    Exercise(name: 'Bench Press', muscleGroup: 'Chest', equipment: 'Barbell'),
-    Exercise(name: 'Back Squat', muscleGroup: 'Legs', equipment: 'Barbell'),
-    Exercise(name: 'Deadlift', muscleGroup: 'Back', equipment: 'Barbell'),
-    Exercise(name: 'Pull-Up', muscleGroup: 'Back', equipment: 'Bodyweight'),
-    Exercise(
-      name: 'Overhead Press',
-      muscleGroup: 'Shoulders',
-      equipment: 'Barbell',
-    ),
-    Exercise(name: 'Bicep Curl', muscleGroup: 'Arms', equipment: 'Dumbbell'),
-    Exercise(name: 'Barbell Row', muscleGroup: 'Back', equipment: 'Barbell'),
-    Exercise(
-      name: 'Incline Dumbbell Press',
-      muscleGroup: 'Chest',
-      equipment: 'Dumbbell',
-    ),
-    Exercise(
-      name: 'Lateral Raise',
-      muscleGroup: 'Shoulders',
-      equipment: 'Dumbbell',
-    ),
-    Exercise(
-      name: 'Romanian Deadlift',
-      muscleGroup: 'Legs',
-      equipment: 'Barbell',
-    ),
-    Exercise(name: 'Leg Press', muscleGroup: 'Legs', equipment: 'Machine'),
-    Exercise(name: 'Calf Raise', muscleGroup: 'Legs', equipment: 'Machine'),
-    Exercise(name: 'Face Pull', muscleGroup: 'Back', equipment: 'Cable'),
-    Exercise(
-      name: 'Tricep Pushdown',
-      muscleGroup: 'Arms',
-      equipment: 'Cable',
-    ),
+    Exercise(id: 'ex-001', nameByLang: {'en': 'Bench Press'}, muscleGroup: 'Chest', equipment: 'Barbell'),
+    Exercise(id: 'ex-002', nameByLang: {'en': 'Back Squat'}, muscleGroup: 'Legs', equipment: 'Barbell'),
+    Exercise(id: 'ex-003', nameByLang: {'en': 'Deadlift'}, muscleGroup: 'Back', equipment: 'Barbell'),
+    Exercise(id: 'ex-004', nameByLang: {'en': 'Pull-Up'}, muscleGroup: 'Back', equipment: 'Bodyweight'),
+    Exercise(id: 'ex-005', nameByLang: {'en': 'Overhead Press'}, muscleGroup: 'Shoulders', equipment: 'Barbell'),
+    Exercise(id: 'ex-006', nameByLang: {'en': 'Bicep Curl'}, muscleGroup: 'Arms', equipment: 'Dumbbell'),
+    Exercise(id: 'ex-007', nameByLang: {'en': 'Barbell Row'}, muscleGroup: 'Back', equipment: 'Barbell'),
+    Exercise(id: 'ex-008', nameByLang: {'en': 'Incline Dumbbell Press'}, muscleGroup: 'Chest', equipment: 'Dumbbell'),
+    Exercise(id: 'ex-009', nameByLang: {'en': 'Lateral Raise'}, muscleGroup: 'Shoulders', equipment: 'Dumbbell'),
+    Exercise(id: 'ex-010', nameByLang: {'en': 'Romanian Deadlift'}, muscleGroup: 'Legs', equipment: 'Barbell'),
+    Exercise(id: 'ex-011', nameByLang: {'en': 'Leg Press'}, muscleGroup: 'Legs', equipment: 'Machine'),
+    Exercise(id: 'ex-012', nameByLang: {'en': 'Calf Raise'}, muscleGroup: 'Legs', equipment: 'Machine'),
+    Exercise(id: 'ex-013', nameByLang: {'en': 'Face Pull'}, muscleGroup: 'Back', equipment: 'Cable'),
+    Exercise(id: 'ex-014', nameByLang: {'en': 'Tricep Pushdown'}, muscleGroup: 'Arms', equipment: 'Cable'),
   ];
 
   static const ProgressSummary progress = ProgressSummary(

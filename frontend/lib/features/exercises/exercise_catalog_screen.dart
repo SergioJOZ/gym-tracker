@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/exercise_thumb.dart';
+import '../../core/widgets/scale_on_press.dart';
+import '../../core/widgets/staggered_entrance.dart';
 import '../../data/mock/mock_data.dart';
 import '../../data/models/models.dart';
 
@@ -103,9 +105,11 @@ class _ExerciseCatalogScreenState extends State<ExerciseCatalogScreen> {
         ),
         Expanded(
           child: ListView(
+            key: const PageStorageKey<String>('exercises-list'),
             children: [
-              for (final exercise in exercises)
-                _CatalogRow(exercise: exercise),
+              ...StaggeredEntrance.wrap(
+                [for (final exercise in exercises) _CatalogRow(exercise: exercise)],
+              ),
               const SizedBox(height: 16),
             ],
           ),
@@ -166,40 +170,42 @@ class _CatalogRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-      child: Row(
-        children: [
-          const ExerciseThumb(),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  exercise.name,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+    return ScaleOnPress(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        child: Row(
+          children: [
+            const ExerciseThumb(),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    exercise.name,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${exercise.muscleGroup} · ${exercise.equipment}',
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    color: AppColors.textSecondary,
+                  const SizedBox(height: 2),
+                  Text(
+                    '${exercise.muscleGroup} · ${exercise.equipment}',
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const Icon(
-            Icons.chevron_right,
-            size: 18,
-            color: AppColors.textTertiary,
-          ),
-        ],
+            const Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: AppColors.textTertiary,
+            ),
+          ],
+        ),
       ),
     );
   }

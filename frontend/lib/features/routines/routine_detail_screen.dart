@@ -53,17 +53,23 @@ class RoutineDetailScreen extends StatelessWidget {
               ),
             ),
           ),
-          Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Column(
-                children: [
-                  for (var i = 0; i < exercises.length; i++) ...[
-                    _ExerciseRow(exercise: exercises[i]),
-                    if (i < exercises.length - 1) const Divider(),
+          Hero(
+            // Matches the Hero tag on `_RoutineCard` in routines_screen.dart
+            // so the shared-element transition animates from card to header.
+            tag: routine.id,
+            child: Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Column(
+                  children: [
+                    for (var i = 0; i < exercises.length; i++) ...[
+                      _ExerciseRow(exercise: exercises[i]),
+                      if (i < exercises.length - 1) const Divider(),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),

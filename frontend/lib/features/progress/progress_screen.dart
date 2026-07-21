@@ -1,24 +1,47 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_feedback.dart';
+import '../../core/widgets/staggered_entrance.dart';
 import '../../data/mock/mock_data.dart';
 
 /// Progress tab: headline stats, weekly volume bars and personal records.
+///
+/// Stat cards and personal-record rows fade+slide in via [StaggeredEntrance].
+/// The weekly volume bars grow from the bottom upward with a spring curve on
+/// first appearance. The screen's [ListView] carries a stable
+/// [PageStorageKey] so the [MainShell]'s [PageStorageBucket] restores scroll
+/// position across tab switches.
 class ProgressScreen extends StatelessWidget {
   const ProgressScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final summary = MockData.progress;
-    final records = MockData.personalRecords;
+    const summary = MockData.progress;
+    const records = MockData.personalRecords;
     final stats = [
       (summary.totalWorkouts, 'Workouts'),
       (summary.workoutsThisWeek, 'This Week'),
       (summary.totalVolume, 'Volume'),
     ];
 
+    // Staggered stat cards: each card is wrapped so its delay is i × stagger.
+    final staggeredStats = StaggeredEntrance.wrap(
+      [for (final s in stats) _StatCard(value: s.$1, label: s.$2)],
+    );
+
+    // Staggered record rows. The dividers between them stay outside the
+    // stagger wrappers so only the rows animate.
+    final staggeredRecords = StaggeredEntrance.wrap(
+      [
+        for (final r in records)
+          _RecordRow(name: r.exerciseName, detail: r.detail, value: r.value),
+      ],
+    );
+
     return ListView(
+      key: const PageStorageKey<String>('progress-list'),
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 6, 16, 2),
@@ -31,14 +54,9 @@ class ProgressScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
           child: Row(
             children: [
-              for (var i = 0; i < stats.length; i++) ...[
+              for (var i = 0; i < staggeredStats.length; i++) ...[
                 if (i > 0) const SizedBox(width: 10),
-                Expanded(
-                  child: _StatCard(
-                    value: stats[i].$1,
-                    label: stats[i].$2,
-                  ),
-                ),
+                Expanded(child: staggeredStats[i]),
               ],
             ],
           ),
@@ -103,13 +121,9 @@ class ProgressScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                for (var i = 0; i < records.length; i++) ...[
-                  _RecordRow(
-                    name: records[i].exerciseName,
-                    detail: records[i].detail,
-                    value: records[i].value,
-                  ),
-                  if (i < records.length - 1) const Divider(),
+                for (var i = 0; i < staggeredRecords.length; i++) ...[
+                  staggeredRecords[i],
+                  if (i < staggeredRecords.length - 1) const Divider(),
                 ],
               ],
             ),
@@ -158,58 +172,120 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _WeeklyBars extends StatelessWidget {
+/// Weekly volume bars animating from the bottom upward on first appearance.
+///
+/// Driven by a single [AnimationController] using [MotionTokens.slow] and the
+/// spring curve. Each bar grows from 0 to its target fraction in lockstep
+/// (the spec only requires bottom-up growth via spring, not a per-bar
+/// stagger). Under reduced-motion the controller resolves to a 0ms
+/// jump-to-completion, so bars appear at full value instantly (per the
+/// "Reduced-motion snaps to value" scenario).
+class _WeeklyBars extends StatefulWidget {
   final List<double> fractions;
   final List<String> labels;
 
   const _WeeklyBars({required this.fractions, required this.labels});
 
   @override
-  Widget build(BuildContext context) {
-    final maxFraction = fractions.reduce((a, b) => a > b ? a : b);
+  State<_WeeklyBars> createState() => _WeeklyBarsState();
+}
 
+class _WeeklyBarsState extends State<_WeeklyBars>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _growth;
+  late final double _maxFraction;
+
+  @override
+  void initState() {
+    super.initState();
+    // Guard against an empty fractions list — `reduce` would throw.
+    _maxFraction = widget.fractions.isEmpty
+        ? 0.0
+        : widget.fractions.reduce((a, b) => a > b ? a : b);
+    _controller = AnimationController(
+      duration: MotionTokens.slow,
+      vsync: this,
+    );
+    _growth = CurvedAnimation(
+      parent: _controller,
+      // Spring overshoot gives the bars a subtle settle, matching the spec's
+      // "via spring" wording.
+      curve: MotionTokens.spring,
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Forward is triggered here so the reduced-motion gate has a valid
+    // context. `resolve` returns Duration.zero under reduced-motion, which
+    // makes the CurvedAnimation complete instantly on first frame.
+    if (MotionTokens.disabled(context)) {
+      _controller.value = 1.0;
+    } else {
+      _controller.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         // Reserve vertical room for the day label and its gap.
         final barArea = constraints.maxHeight - 22;
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            for (var i = 0; i < fractions.length; i++)
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    right: i < fractions.length - 1 ? 8 : 0,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Container(
-                        height: barArea * fractions[i],
-                        decoration: BoxDecoration(
-                          color: fractions[i] == maxFraction
-                              ? AppColors.accent
-                              : AppColors.surface2,
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(6),
-                            bottom: Radius.circular(3),
+        return AnimatedBuilder(
+          animation: _growth,
+          builder: (context, _) {
+            final progress = _growth.value;
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                for (var i = 0; i < widget.fractions.length; i++)
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        right: i < widget.fractions.length - 1 ? 8 : 0,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Container(
+                            height: barArea *
+                                widget.fractions[i] *
+                                progress,
+                            decoration: BoxDecoration(
+                              color: widget.fractions[i] == _maxFraction
+                                  ? AppColors.accent
+                                  : AppColors.surface2,
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(6),
+                                bottom: Radius.circular(3),
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 6),
+                          Text(
+                            widget.labels[i],
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        labels[i],
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textTertiary,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-          ],
+              ],
+            );
+          },
         );
       },
     );
