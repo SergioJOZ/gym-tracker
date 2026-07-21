@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/joho/godotenv"
 	"github.com/google/uuid"
 	"github.com/sergiojoz/gym-tracker/internal/domain"
 	"github.com/sergiojoz/gym-tracker/internal/repository/postgres"
@@ -36,6 +37,9 @@ type exerciseJSON struct {
 }
 
 func main() {
+	// Load .env file for local development (silently ignored in production/Docker)
+	_ = godotenv.Load()
+
 	datasetPath := os.Getenv("DATASET_PATH")
 	if datasetPath == "" {
 		log.Fatal("DATASET_PATH environment variable is required")
@@ -65,10 +69,20 @@ func main() {
 
 	log.Printf("found %d exercises in dataset", len(rawExercises))
 
+	// Load optional translations (Spanish exercise names)
+	datasetDir := filepath.Dir(datasetPath)
+	translationsPath := filepath.Join(datasetDir, "translations.json")
+	translations := loadTranslations(translationsPath)
+	if translations != nil {
+		log.Printf("loaded %d Spanish name translations", len(translations))
+	} else {
+		log.Println("no translations file found, exercises will have English names only")
+	}
+
 	// Map JSON to domain exercises
 	exercises := make([]*domain.Exercise, 0, len(rawExercises))
 	for i, raw := range rawExercises {
-		ex, err := mapExerciseJSON(raw)
+		ex, err := mapExerciseJSON(raw, translations)
 		if err != nil {
 			log.Printf("warning: skipping exercise %d: %v", i, err)
 			continue
@@ -102,14 +116,14 @@ func main() {
 	log.Printf("successfully upserted %d exercises", len(exercises))
 
 	// Copy media files if dataset directory contains them
-	datasetDir := filepath.Dir(datasetPath)
 	copyMediaFiles(datasetDir, mediaRootDir)
 
 	log.Println("seed completed successfully")
 }
 
-// mapExerciseJSON converts a raw JSON exercise to a domain Exercise.
-func mapExerciseJSON(raw json.RawMessage) (*domain.Exercise, error) {
+// mapExerciseJSON converts a raw JSON exercise to a domain Exercise,
+// using the optional translations map (dataset ID -> Spanish name) for i18n.
+func mapExerciseJSON(raw json.RawMessage, translations map[string]string) (*domain.Exercise, error) {
 	var j exerciseJSON
 	if err := json.Unmarshal(raw, &j); err != nil {
 		return nil, fmt.Errorf("invalid JSON: %w", err)
@@ -131,11 +145,19 @@ func mapExerciseJSON(raw json.RawMessage) (*domain.Exercise, error) {
 		id = uuid.New()
 	}
 
-	// Build description from English instructions
-	description := ""
+	// Build multi-language names
+	names := map[string]string{"en": j.Name}
+	if translations != nil {
+		if es, ok := translations[j.ID]; ok && es != "" {
+			names["es"] = es
+		}
+	}
+
+	// Build multi-language descriptions from dataset instructions
+	descriptions := make(map[string]string)
 	if j.Instructions != nil {
-		if en, ok := j.Instructions["en"]; ok {
-			description = en
+		for lang, text := range j.Instructions {
+			descriptions[lang] = text
 		}
 	}
 
@@ -143,16 +165,35 @@ func mapExerciseJSON(raw json.RawMessage) (*domain.Exercise, error) {
 	difficulty := "beginner"
 
 	return &domain.Exercise{
-		ID:            id,
-		Name:          j.Name,
-		Description:   description,
-		MuscleGroup:   j.MuscleGroup,
-		Equipment:     j.Equipment,
-		Difficulty:    difficulty,
-		Category:      j.Category,
-		GIFPath:       j.GIFURL,
-		ThumbnailPath: j.Image,
+		ID:                 id,
+		NameByLang:         names,
+		DescriptionsByLang: descriptions,
+		MuscleGroup:        j.MuscleGroup,
+		Equipment:          j.Equipment,
+		Difficulty:         difficulty,
+		Category:           j.Category,
+		GIFPath:            j.GIFURL,
+		ThumbnailPath:      j.Image,
 	}, nil
+}
+
+// loadTranslations reads a JSON file mapping dataset IDs to Spanish names.
+// Returns nil if the file does not exist.
+func loadTranslations(path string) map[string]string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		log.Printf("warning: failed to read translations: %v", err)
+		return nil
+	}
+	var translations map[string]string
+	if err := json.Unmarshal(data, &translations); err != nil {
+		log.Printf("warning: failed to parse translations: %v", err)
+		return nil
+	}
+	return translations
 }
 
 // copyMediaFiles copies GIFs and thumbnails from the dataset directory to the media root.

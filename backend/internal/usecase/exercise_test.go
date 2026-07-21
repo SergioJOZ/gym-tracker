@@ -40,8 +40,8 @@ func (m *MockExerciseRepository) Exists(ctx context.Context, id uuid.UUID) (bool
 
 func TestExerciseUseCase_List_Success(t *testing.T) {
 	exercises := []*domain.Exercise{
-		{ID: uuid.New(), Name: "Bench Press", MuscleGroup: "chest", Difficulty: "intermediate"},
-		{ID: uuid.New(), Name: "Squat", MuscleGroup: "legs", Difficulty: "intermediate"},
+		{ID: uuid.New(), NameByLang: map[string]string{"en": "Bench Press"}, MuscleGroup: "chest", Difficulty: "intermediate"},
+		{ID: uuid.New(), NameByLang: map[string]string{"en": "Squat"}, MuscleGroup: "legs", Difficulty: "intermediate"},
 	}
 
 	mockRepo := &MockExerciseRepository{
@@ -63,7 +63,7 @@ func TestExerciseUseCase_List_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, results, 2)
 	assert.False(t, hasMore)
-	assert.Equal(t, "Bench Press", results[0].Name)
+	assert.Equal(t, "Bench Press", results[0].NameByLang["en"])
 }
 
 func TestExerciseUseCase_List_Empty(t *testing.T) {
@@ -100,13 +100,13 @@ func TestExerciseUseCase_List_DefaultLimit(t *testing.T) {
 func TestExerciseUseCase_GetByID_Success(t *testing.T) {
 	exerciseID := uuid.New()
 	exercise := &domain.Exercise{
-		ID:          exerciseID,
-		Name:        "Bench Press",
-		Description: "Compound chest exercise",
-		MuscleGroup: "chest",
-		Equipment:   "barbell",
-		Difficulty:  "intermediate",
-		Category:    "strength",
+		ID:                 exerciseID,
+		NameByLang:         map[string]string{"en": "Bench Press"},
+		DescriptionsByLang: map[string]string{"en": "Compound chest exercise"},
+		MuscleGroup:        "chest",
+		Equipment:          "barbell",
+		Difficulty:         "intermediate",
+		Category:           "strength",
 	}
 
 	mockRepo := &MockExerciseRepository{
@@ -121,7 +121,7 @@ func TestExerciseUseCase_GetByID_Success(t *testing.T) {
 	result, err := uc.GetByID(context.Background(), exerciseID)
 	require.NoError(t, err)
 	assert.Equal(t, exerciseID, result.ID)
-	assert.Equal(t, "Bench Press", result.Name)
+	assert.Equal(t, "Bench Press", result.NameByLang["en"])
 	assert.Equal(t, "chest", result.MuscleGroup)
 }
 
@@ -144,7 +144,7 @@ func TestExerciseUseCase_List_WithSearch(t *testing.T) {
 		ListFunc: func(ctx context.Context, filter repository.ExerciseFilter) ([]*domain.Exercise, bool, error) {
 			assert.Equal(t, "bench", filter.Search)
 			return []*domain.Exercise{
-				{ID: uuid.New(), Name: "Bench Press", MuscleGroup: "chest", Difficulty: "beginner"},
+				{ID: uuid.New(), NameByLang: map[string]string{"en": "Bench Press"}, MuscleGroup: "chest", Difficulty: "beginner"},
 			}, false, nil
 		},
 	}
@@ -159,7 +159,7 @@ func TestExerciseUseCase_List_WithSearch(t *testing.T) {
 	results, _, err := uc.List(context.Background(), filter)
 	require.NoError(t, err)
 	assert.Len(t, results, 1)
-	assert.Equal(t, "Bench Press", results[0].Name)
+	assert.Equal(t, "Bench Press", results[0].NameByLang["en"])
 }
 
 func TestExerciseUseCase_List_WithPagination(t *testing.T) {
@@ -168,7 +168,7 @@ func TestExerciseUseCase_List_WithPagination(t *testing.T) {
 			assert.Equal(t, "some-cursor", filter.Cursor)
 			assert.Equal(t, 5, filter.Limit)
 			return []*domain.Exercise{
-				{ID: uuid.New(), Name: "Exercise 3", MuscleGroup: "chest", Difficulty: "beginner"},
+				{ID: uuid.New(), NameByLang: map[string]string{"en": "Exercise 3"}, MuscleGroup: "chest", Difficulty: "beginner"},
 			}, false, nil
 		},
 	}

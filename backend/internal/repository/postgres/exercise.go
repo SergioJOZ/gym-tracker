@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -12,6 +13,36 @@ import (
 	"github.com/sergiojoz/gym-tracker/internal/repository"
 	"github.com/sergiojoz/gym-tracker/pkg/cursor"
 )
+
+// jsonbMap is a helper type for scanning JSONB into a map[string]string.
+// It also implements driver.Valuer so it can be passed directly to Exec/Query.
+type jsonbMap map[string]string
+
+// Scan implements the sql.Scanner interface for reading JSONB columns.
+func (m *jsonbMap) Scan(src interface{}) error {
+	if src == nil {
+		*m = make(map[string]string)
+		return nil
+	}
+	var source []byte
+	switch v := src.(type) {
+	case []byte:
+		source = v
+	case string:
+		source = []byte(v)
+	default:
+		return fmt.Errorf("jsonbMap: unsupported type %T", src)
+	}
+	return json.Unmarshal(source, (*map[string]string)(m))
+}
+
+// Value implements driver.Valuer for writing JSONB columns.
+func (m jsonbMap) Value() (interface{}, error) {
+	if m == nil {
+		return []byte("{}"), nil
+	}
+	return json.Marshal(m)
+}
 
 // ExerciseRepository implements repository.ExerciseRepository using PostgreSQL.
 type ExerciseRepository struct {
@@ -30,11 +61,11 @@ func (r *ExerciseRepository) BulkUpsert(ctx context.Context, exercises []*domain
 	}
 
 	query := `
-		INSERT INTO exercises (id, name, description, muscle_group, equipment, difficulty, category, gif_path, thumbnail_path)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO exercises (id, names, descriptions, muscle_group, equipment, difficulty, category, gif_path, thumbnail_path)
+		VALUES ($1, $2::jsonb, $3::jsonb, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (id) DO UPDATE SET
-			name = EXCLUDED.name,
-			description = EXCLUDED.description,
+			names = EXCLUDED.names,
+			descriptions = EXCLUDED.descriptions,
 			muscle_group = EXCLUDED.muscle_group,
 			equipment = EXCLUDED.equipment,
 			difficulty = EXCLUDED.difficulty,
@@ -46,7 +77,7 @@ func (r *ExerciseRepository) BulkUpsert(ctx context.Context, exercises []*domain
 
 	for _, ex := range exercises {
 		_, err := r.db.ExecContext(ctx, query,
-			ex.ID, ex.Name, ex.Description, ex.MuscleGroup,
+			ex.ID, jsonbMap(ex.NameByLang), jsonbMap(ex.DescriptionsByLang), ex.MuscleGroup,
 			ex.Equipment, ex.Difficulty, ex.Category,
 			ex.GIFPath, ex.ThumbnailPath,
 		)
@@ -61,17 +92,23 @@ func (r *ExerciseRepository) BulkUpsert(ctx context.Context, exercises []*domain
 // GetByID retrieves an exercise by its ID.
 func (r *ExerciseRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Exercise, error) {
 	query := `
-		SELECT id, name, description, muscle_group, equipment, difficulty, category, gif_path, thumbnail_path
+		SELECT id, names, descriptions, muscle_group, equipment, difficulty, category, gif_path, thumbnail_path
 		FROM exercises
 		WHERE id = $1
 	`
 
 	ex := &domain.Exercise{}
+	var names jsonbMap
+	var descriptions jsonbMap
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&ex.ID, &ex.Name, &ex.Description, &ex.MuscleGroup,
+		&ex.ID, &names, &descriptions, &ex.MuscleGroup,
 		&ex.Equipment, &ex.Difficulty, &ex.Category,
 		&ex.GIFPath, &ex.ThumbnailPath,
 	)
+	if err == nil {
+		ex.NameByLang = map[string]string(names)
+		ex.DescriptionsByLang = map[string]string(descriptions)
+	}
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -152,7 +189,7 @@ func (r *ExerciseRepository) List(ctx context.Context, filter repository.Exercis
 
 	// Fetch limit+1 to determine HasMore
 	query := fmt.Sprintf(`
-		SELECT id, name, description, muscle_group, equipment, difficulty, category, gif_path, thumbnail_path
+		SELECT id, names, descriptions, muscle_group, equipment, difficulty, category, gif_path, thumbnail_path
 		FROM exercises
 		%s
 		ORDER BY id ASC
@@ -169,13 +206,17 @@ func (r *ExerciseRepository) List(ctx context.Context, filter repository.Exercis
 	var exercises []*domain.Exercise
 	for rows.Next() {
 		ex := &domain.Exercise{}
+		var names jsonbMap
+		var descriptions jsonbMap
 		if err := rows.Scan(
-			&ex.ID, &ex.Name, &ex.Description, &ex.MuscleGroup,
+			&ex.ID, &names, &descriptions, &ex.MuscleGroup,
 			&ex.Equipment, &ex.Difficulty, &ex.Category,
 			&ex.GIFPath, &ex.ThumbnailPath,
 		); err != nil {
 			return nil, false, err
 		}
+		ex.NameByLang = map[string]string(names)
+		ex.DescriptionsByLang = map[string]string(descriptions)
 		exercises = append(exercises, ex)
 	}
 

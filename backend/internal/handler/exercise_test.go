@@ -31,8 +31,8 @@ func (m *MockExerciseUseCase) GetByID(ctx context.Context, id uuid.UUID) (*domai
 
 func TestExerciseHandler_List_Success(t *testing.T) {
 	exercises := []*domain.Exercise{
-		{ID: uuid.New(), Name: "Bench Press", MuscleGroup: "chest", Difficulty: "intermediate"},
-		{ID: uuid.New(), Name: "Squat", MuscleGroup: "legs", Difficulty: "intermediate"},
+		{ID: uuid.New(), NameByLang: map[string]string{"en": "Bench Press"}, MuscleGroup: "chest", Difficulty: "intermediate"},
+		{ID: uuid.New(), NameByLang: map[string]string{"en": "Squat"}, MuscleGroup: "legs", Difficulty: "intermediate"},
 	}
 
 	mockUC := &MockExerciseUseCase{
@@ -105,13 +105,13 @@ func TestExerciseHandler_List_WithCursor(t *testing.T) {
 func TestExerciseHandler_GetByID_Success(t *testing.T) {
 	exerciseID := uuid.New()
 	exercise := &domain.Exercise{
-		ID:          exerciseID,
-		Name:        "Bench Press",
-		Description: "Compound chest exercise",
-		MuscleGroup: "chest",
-		Equipment:   "barbell",
-		Difficulty:  "intermediate",
-		Category:    "strength",
+		ID:                 exerciseID,
+		NameByLang:         map[string]string{"en": "Bench Press"},
+		DescriptionsByLang: map[string]string{"en": "Compound chest exercise"},
+		MuscleGroup:        "chest",
+		Equipment:          "barbell",
+		Difficulty:         "intermediate",
+		Category:           "strength",
 	}
 
 	mockUC := &MockExerciseUseCase{
@@ -135,7 +135,10 @@ func TestExerciseHandler_GetByID_Success(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	assert.Equal(t, exerciseID.String(), resp["id"])
-	assert.Equal(t, "Bench Press", resp["name"])
+	// name_by_lang is a nested object {"en": "Bench Press"}, verify it exists
+	nameByLang, ok := resp["name_by_lang"].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "Bench Press", nameByLang["en"])
 }
 
 func TestExerciseHandler_GetByID_NotFound(t *testing.T) {
