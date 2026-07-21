@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/joho/godotenv"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"github.com/sergiojoz/gym-tracker/configs"
 	"github.com/sergiojoz/gym-tracker/internal/handler"
@@ -16,6 +17,9 @@ import (
 )
 
 func main() {
+	// Load .env file for local development (silently ignored in production/Docker)
+	_ = godotenv.Load()
+
 	// Load configuration
 	cfg, err := configs.Load()
 	if err != nil {

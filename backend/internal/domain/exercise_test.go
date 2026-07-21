@@ -8,15 +8,15 @@ import (
 
 func TestExercise_Validate_Valid(t *testing.T) {
 	ex := &Exercise{
-		ID:           uuid.New(),
-		Name:         "Bench Press",
-		Description:  "A compound exercise targeting the chest.",
-		MuscleGroup:  "chest",
-		Equipment:    "barbell",
-		Difficulty:   "intermediate",
-		Category:     "strength",
-		GIFPath:      "/gifs/bench_press.gif",
-		ThumbnailPath: "/thumbnails/bench_press.jpg",
+		ID:                 uuid.New(),
+		NameByLang:         map[string]string{"en": "Bench Press"},
+		DescriptionsByLang: map[string]string{"en": "A compound exercise targeting the chest."},
+		MuscleGroup:        "chest",
+		Equipment:          "barbell",
+		Difficulty:         "intermediate",
+		Category:           "strength",
+		GIFPath:            "/gifs/bench_press.gif",
+		ThumbnailPath:      "/thumbnails/bench_press.jpg",
 	}
 
 	if err := ex.Validate(); err != nil {
@@ -27,7 +27,7 @@ func TestExercise_Validate_Valid(t *testing.T) {
 func TestExercise_Validate_EmptyName(t *testing.T) {
 	ex := &Exercise{
 		ID:          uuid.New(),
-		Name:        "",
+		NameByLang:  map[string]string{"en": ""},
 		MuscleGroup: "chest",
 	}
 
@@ -49,20 +49,20 @@ func TestExercise_Validate_EmptyName(t *testing.T) {
 
 	found := false
 	for _, d := range appErr.Details {
-		if d.Field == "name" {
+		if d.Field == "name_by_lang" {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Error("expected 'name' field in validation details")
+		t.Error("expected 'name_by_lang' field in validation details")
 	}
 }
 
 func TestExercise_Validate_EmptyMuscleGroup(t *testing.T) {
 	ex := &Exercise{
 		ID:          uuid.New(),
-		Name:        "Bench Press",
+		NameByLang:  map[string]string{"en": "Bench Press"},
 		MuscleGroup: "",
 	}
 
@@ -91,7 +91,6 @@ func TestExercise_Validate_EmptyMuscleGroup(t *testing.T) {
 func TestExercise_Validate_MultipleErrors(t *testing.T) {
 	ex := &Exercise{
 		ID:          uuid.New(),
-		Name:        "",
 		MuscleGroup: "",
 	}
 
@@ -113,7 +112,7 @@ func TestExercise_Validate_MultipleErrors(t *testing.T) {
 func TestExercise_Validate_Defaults(t *testing.T) {
 	ex := &Exercise{
 		ID:          uuid.New(),
-		Name:        "Push Up",
+		NameByLang:  map[string]string{"en": "Push Up"},
 		MuscleGroup: "chest",
 	}
 
@@ -130,7 +129,7 @@ func TestExercise_Validate_Defaults(t *testing.T) {
 func TestExercise_Validate_InvalidDifficulty(t *testing.T) {
 	ex := &Exercise{
 		ID:          uuid.New(),
-		Name:        "Push Up",
+		NameByLang:  map[string]string{"en": "Push Up"},
 		MuscleGroup: "chest",
 		Difficulty:  "invalid_level",
 	}

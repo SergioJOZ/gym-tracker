@@ -1,0 +1,39 @@
+# Dart / Flutter
+.dart_tool/
+build/
+.pub/
+.cache/
+.packages
+.pub-preload-cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+flutter_*.log
+*.iml
+.metadata
+*.js.map
+*.js.js.map
+*.dart.js
+*.info.json
+
+# IDE (optional — add .idea/ if you want to share project config)
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# FVM (Flutter Version Management)
+.fvm/flutter_sdk/
+
+# Platform-specific build artifacts
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Runner.xcworkspace/xcuserdata/
+ios/Flutter/ephemeral/
+macos/Flutter/ephemeral/
+web/firebase-messaging-sw.js

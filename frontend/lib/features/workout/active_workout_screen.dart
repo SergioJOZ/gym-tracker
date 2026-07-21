@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' show FontFeature;
 
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_feedback.dart';
 import '../../data/models/models.dart';
 
@@ -22,23 +22,61 @@ class ActiveWorkoutScreen extends StatefulWidget {
   State<ActiveWorkoutScreen> createState() => _ActiveWorkoutScreenState();
 }
 
-class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
+class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
+    with SingleTickerProviderStateMixin {
   late final Timer _timer;
   int _elapsedSeconds = 0;
   late final List<_WorkoutExercise> _exercises;
 
+  /// Pulse controller driving a subtle 1.0 → 1.05 → 1.0 scale on the timer
+  /// digits once per elapsed second (Apple Fitness style). The animation is
+  /// gated by [MotionTokens.disabled] at fire time, so reduced-motion
+  /// sessions never start the controller.
+  late final AnimationController _pulse;
+  late final Animation<double> _pulseScale;
+
   @override
   void initState() {
     super.initState();
+    _pulse = AnimationController(
+      duration: MotionTokens.fast,
+      vsync: this,
+    );
+    _pulseScale = TweenSequence<double>(
+      <TweenSequenceItem<double>>[
+        TweenSequenceItem<double>(
+          tween: Tween<double>(begin: 1.0, end: 1.05),
+          weight: 0.5,
+        ),
+        TweenSequenceItem<double>(
+          tween: Tween<double>(begin: 1.05, end: 1.0),
+          weight: 0.5,
+        ),
+      ],
+    ).animate(
+      CurvedAnimation(
+        parent: _pulse,
+        // Spring curve micro-interactions are governed by MotionTokens.
+        curve: MotionTokens.standard,
+      ),
+    );
     _exercises = _buildExercises();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() => _elapsedSeconds++);
+      // Fire a single pulse per tick. Skipped under reduced-motion so the
+      // effective digit duration is 0ms (per the ui-motion Reduced-Motion
+      // Gate requirement). `context` is valid here: the periodic callback
+      // fires only after the first frame and build have happened.
+      if (!MotionTokens.disabled(context)) {
+        _pulse.forward(from: 0.0);
+      }
     });
   }
 
   @override
   void dispose() {
     _timer.cancel();
+    _pulse.dispose();
     super.dispose();
   }
 
@@ -108,13 +146,20 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                       ),
                     ),
                   ),
-                  Text(
-                    _elapsedLabel,
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.accent,
-                      fontFeatures: [FontFeature.tabularFigures()],
+                  AnimatedBuilder(
+                    animation: _pulse,
+                    builder: (context, child) => Transform.scale(
+                      scale: _pulseScale.value,
+                      child: child,
+                    ),
+                    child: Text(
+                      _elapsedLabel,
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.accent,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -436,48 +481,44 @@ class _ValueBox extends StatelessWidget {
 }
 
 /// Paints a dashed rounded-rect border for the "Add Exercise" ghost button.
+///
+/// The border style (radius, stroke, dash shape) is fixed by design for this
+/// ghost button; only the [color] varies with the theme. Configurable params
+/// were previously unused — inlined as private constants here so the class
+/// exposes only what callers actually use.
 class _DashedRRectPainter extends CustomPainter {
-  final Color color;
-  final double radius;
-  final double strokeWidth;
-  final double dashLength;
-  final double dashGap;
+  static const double _radius = AppRadius.card;
+  static const double _strokeWidth = 1;
+  static const double _dashLength = 6;
+  static const double _dashGap = 4;
 
-  const _DashedRRectPainter({
-    required this.color,
-    this.radius = AppRadius.card,
-    this.strokeWidth = 1,
-    this.dashLength = 6,
-    this.dashGap = 4,
-  });
+  final Color color;
+
+  const _DashedRRectPainter({required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth;
+      ..strokeWidth = _strokeWidth;
     final rrect = RRect.fromRectAndRadius(
       Offset.zero & size,
-      Radius.circular(radius),
-    ).deflate(strokeWidth / 2);
+      const Radius.circular(_radius),
+    ).deflate(_strokeWidth / 2);
     final path = Path()..addRRect(rrect);
     for (final metric in path.computeMetrics()) {
       var distance = 0.0;
       while (distance < metric.length) {
-        final length = math.min(dashLength, metric.length - distance);
+        final length = math.min(_dashLength, metric.length - distance);
         canvas.drawPath(metric.extractPath(distance, distance + length), paint);
-        distance += dashLength + dashGap;
+        distance += _dashLength + _dashGap;
       }
     }
   }
 
   @override
   bool shouldRepaint(covariant _DashedRRectPainter oldDelegate) {
-    return oldDelegate.color != color ||
-        oldDelegate.radius != radius ||
-        oldDelegate.strokeWidth != strokeWidth ||
-        oldDelegate.dashLength != dashLength ||
-        oldDelegate.dashGap != dashGap;
+    return oldDelegate.color != color;
   }
 }

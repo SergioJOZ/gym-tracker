@@ -13,15 +13,15 @@ var validDifficulties = map[string]bool{
 
 // Exercise represents an exercise in the catalog.
 type Exercise struct {
-	ID            uuid.UUID `json:"id"`
-	Name          string    `json:"name"`
-	Description   string    `json:"description"`
-	MuscleGroup   string    `json:"muscle_group"`
-	Equipment     string    `json:"equipment"`
-	Difficulty    string    `json:"difficulty"`
-	Category      string    `json:"category"`
-	GIFPath       string    `json:"gif_path"`
-	ThumbnailPath string    `json:"thumbnail_path"`
+	ID                 uuid.UUID          `json:"id"`
+	NameByLang         map[string]string  `json:"name_by_lang"`
+	DescriptionsByLang map[string]string  `json:"descriptions_by_lang"`
+	MuscleGroup        string             `json:"muscle_group"`
+	Equipment          string             `json:"equipment"`
+	Difficulty         string             `json:"difficulty"`
+	Category           string             `json:"category"`
+	GIFPath            string             `json:"gif_path"`
+	ThumbnailPath      string             `json:"thumbnail_path"`
 }
 
 // Validate checks that required fields are present and sets defaults.
@@ -29,8 +29,8 @@ type Exercise struct {
 func (e *Exercise) Validate() error {
 	var details []FieldError
 
-	if e.Name == "" {
-		details = append(details, FieldError{Field: "name", Message: "is required"})
+	if len(e.NameByLang) == 0 || e.NameByLang["en"] == "" {
+		details = append(details, FieldError{Field: "name_by_lang", Message: "at least 'en' entry is required"})
 	}
 
 	if e.MuscleGroup == "" {

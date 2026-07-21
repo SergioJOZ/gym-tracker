@@ -21,22 +21,22 @@ func TestExerciseRepo_BulkUpsert(t *testing.T) {
 
 	exercises := []*domain.Exercise{
 		{
-			ID:          uuid.New(),
-			Name:        "Bench Press",
-			Description: "Compound chest exercise",
-			MuscleGroup: "chest",
-			Equipment:   "barbell",
-			Difficulty:  "intermediate",
-			Category:    "strength",
+			ID:                 uuid.New(),
+			NameByLang:         map[string]string{"en": "Bench Press"},
+			DescriptionsByLang: map[string]string{"en": "Compound chest exercise"},
+			MuscleGroup:        "chest",
+			Equipment:          "barbell",
+			Difficulty:         "intermediate",
+			Category:           "strength",
 		},
 		{
-			ID:          uuid.New(),
-			Name:        "Squat",
-			Description: "Compound leg exercise",
-			MuscleGroup: "legs",
-			Equipment:   "barbell",
-			Difficulty:  "intermediate",
-			Category:    "strength",
+			ID:                 uuid.New(),
+			NameByLang:         map[string]string{"en": "Squat"},
+			DescriptionsByLang: map[string]string{"en": "Compound leg exercise"},
+			MuscleGroup:        "legs",
+			Equipment:          "barbell",
+			Difficulty:         "intermediate",
+			Category:           "strength",
 		},
 	}
 
@@ -47,7 +47,7 @@ func TestExerciseRepo_BulkUpsert(t *testing.T) {
 	for _, ex := range exercises {
 		found, err := repo.GetByID(context.Background(), ex.ID)
 		require.NoError(t, err)
-		assert.Equal(t, ex.Name, found.Name)
+		assert.Equal(t, ex.NameByLang["en"], found.NameByLang["en"])
 	}
 }
 
@@ -58,24 +58,24 @@ func TestExerciseRepo_BulkUpsert_Update(t *testing.T) {
 	repo := NewExerciseRepository(tdb.DB)
 
 	ex := &domain.Exercise{
-		ID:          uuid.New(),
-		Name:        "Bench Press",
-		Description: "Original description",
-		MuscleGroup: "chest",
-		Difficulty:  "beginner",
+		ID:                 uuid.New(),
+		NameByLang:         map[string]string{"en": "Bench Press"},
+		DescriptionsByLang: map[string]string{"en": "Original description"},
+		MuscleGroup:        "chest",
+		Difficulty:         "beginner",
 	}
 
 	err := repo.BulkUpsert(context.Background(), []*domain.Exercise{ex})
 	require.NoError(t, err)
 
 	// Update the same exercise
-	ex.Description = "Updated description"
+	ex.DescriptionsByLang["en"] = "Updated description"
 	err = repo.BulkUpsert(context.Background(), []*domain.Exercise{ex})
 	require.NoError(t, err)
 
 	found, err := repo.GetByID(context.Background(), ex.ID)
 	require.NoError(t, err)
-	assert.Equal(t, "Updated description", found.Description)
+	assert.Equal(t, "Updated description", found.DescriptionsByLang["en"])
 }
 
 func TestExerciseRepo_GetByID(t *testing.T) {
@@ -85,15 +85,15 @@ func TestExerciseRepo_GetByID(t *testing.T) {
 	repo := NewExerciseRepository(tdb.DB)
 
 	ex := &domain.Exercise{
-		ID:            uuid.New(),
-		Name:          "Deadlift",
-		Description:   "Compound back exercise",
-		MuscleGroup:   "back",
-		Equipment:     "barbell",
-		Difficulty:    "advanced",
-		Category:      "strength",
-		GIFPath:       "/gifs/deadlift.gif",
-		ThumbnailPath: "/thumbnails/deadlift.jpg",
+		ID:                 uuid.New(),
+		NameByLang:         map[string]string{"en": "Deadlift"},
+		DescriptionsByLang: map[string]string{"en": "Compound back exercise"},
+		MuscleGroup:        "back",
+		Equipment:          "barbell",
+		Difficulty:         "advanced",
+		Category:           "strength",
+		GIFPath:            "/gifs/deadlift.gif",
+		ThumbnailPath:      "/thumbnails/deadlift.jpg",
 	}
 
 	err := repo.BulkUpsert(context.Background(), []*domain.Exercise{ex})
@@ -102,7 +102,7 @@ func TestExerciseRepo_GetByID(t *testing.T) {
 	found, err := repo.GetByID(context.Background(), ex.ID)
 	require.NoError(t, err)
 	assert.Equal(t, ex.ID, found.ID)
-	assert.Equal(t, "Deadlift", found.Name)
+	assert.Equal(t, "Deadlift", found.NameByLang["en"])
 	assert.Equal(t, "back", found.MuscleGroup)
 	assert.Equal(t, "barbell", found.Equipment)
 	assert.Equal(t, "advanced", found.Difficulty)
@@ -129,7 +129,7 @@ func TestExerciseRepo_List_NoFilters(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		exercises[i] = &domain.Exercise{
 			ID:          uuid.New(),
-			Name:        "Exercise",
+			NameByLang:  map[string]string{"en": "Exercise"},
 			MuscleGroup: "chest",
 			Difficulty:  "beginner",
 		}
@@ -155,7 +155,7 @@ func TestExerciseRepo_List_Pagination(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		exercises[i] = &domain.Exercise{
 			ID:          uuid.New(),
-			Name:        "Exercise",
+			NameByLang:  map[string]string{"en": "Exercise"},
 			MuscleGroup: "chest",
 			Difficulty:  "beginner",
 		}
@@ -191,9 +191,9 @@ func TestExerciseRepo_List_FilterByMuscleGroup(t *testing.T) {
 	repo := NewExerciseRepository(tdb.DB)
 
 	exercises := []*domain.Exercise{
-		{ID: uuid.New(), Name: "Bench Press", MuscleGroup: "chest", Difficulty: "beginner"},
-		{ID: uuid.New(), Name: "Squat", MuscleGroup: "legs", Difficulty: "beginner"},
-		{ID: uuid.New(), Name: "Row", MuscleGroup: "back", Difficulty: "beginner"},
+		{ID: uuid.New(), NameByLang: map[string]string{"en": "Bench Press"}, MuscleGroup: "chest", Difficulty: "beginner"},
+		{ID: uuid.New(), NameByLang: map[string]string{"en": "Squat"}, MuscleGroup: "legs", Difficulty: "beginner"},
+		{ID: uuid.New(), NameByLang: map[string]string{"en": "Row"}, MuscleGroup: "back", Difficulty: "beginner"},
 	}
 
 	err := repo.BulkUpsert(context.Background(), exercises)
@@ -204,7 +204,7 @@ func TestExerciseRepo_List_FilterByMuscleGroup(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, results, 1)
 	assert.False(t, hasMore)
-	assert.Equal(t, "Bench Press", results[0].Name)
+	assert.Equal(t, "Bench Press", results[0].NameByLang["en"])
 }
 
 func TestExerciseRepo_List_FilterByDifficulty(t *testing.T) {
@@ -214,9 +214,9 @@ func TestExerciseRepo_List_FilterByDifficulty(t *testing.T) {
 	repo := NewExerciseRepository(tdb.DB)
 
 	exercises := []*domain.Exercise{
-		{ID: uuid.New(), Name: "Push Up", MuscleGroup: "chest", Difficulty: "beginner"},
-		{ID: uuid.New(), Name: "Bench Press", MuscleGroup: "chest", Difficulty: "intermediate"},
-		{ID: uuid.New(), Name: "Weighted Dip", MuscleGroup: "chest", Difficulty: "advanced"},
+		{ID: uuid.New(), NameByLang: map[string]string{"en": "Push Up"}, MuscleGroup: "chest", Difficulty: "beginner"},
+		{ID: uuid.New(), NameByLang: map[string]string{"en": "Bench Press"}, MuscleGroup: "chest", Difficulty: "intermediate"},
+		{ID: uuid.New(), NameByLang: map[string]string{"en": "Weighted Dip"}, MuscleGroup: "chest", Difficulty: "advanced"},
 	}
 
 	err := repo.BulkUpsert(context.Background(), exercises)
@@ -226,7 +226,7 @@ func TestExerciseRepo_List_FilterByDifficulty(t *testing.T) {
 	results, _, err := repo.List(context.Background(), filter)
 	require.NoError(t, err)
 	assert.Len(t, results, 1)
-	assert.Equal(t, "Weighted Dip", results[0].Name)
+	assert.Equal(t, "Weighted Dip", results[0].NameByLang["en"])
 }
 
 func TestExerciseRepo_List_Search(t *testing.T) {
@@ -236,9 +236,9 @@ func TestExerciseRepo_List_Search(t *testing.T) {
 	repo := NewExerciseRepository(tdb.DB)
 
 	exercises := []*domain.Exercise{
-		{ID: uuid.New(), Name: "Bench Press", Description: "Compound chest exercise", MuscleGroup: "chest", Difficulty: "beginner"},
-		{ID: uuid.New(), Name: "Squat", Description: "Compound leg exercise", MuscleGroup: "legs", Difficulty: "beginner"},
-		{ID: uuid.New(), Name: "Bicep Curl", Description: "Isolation arm exercise", MuscleGroup: "arms", Difficulty: "beginner"},
+		{ID: uuid.New(), NameByLang: map[string]string{"en": "Bench Press"}, DescriptionsByLang: map[string]string{"en": "Compound chest exercise"}, MuscleGroup: "chest", Difficulty: "beginner"},
+		{ID: uuid.New(), NameByLang: map[string]string{"en": "Squat"}, DescriptionsByLang: map[string]string{"en": "Compound leg exercise"}, MuscleGroup: "legs", Difficulty: "beginner"},
+		{ID: uuid.New(), NameByLang: map[string]string{"en": "Bicep Curl"}, DescriptionsByLang: map[string]string{"en": "Isolation arm exercise"}, MuscleGroup: "arms", Difficulty: "beginner"},
 	}
 
 	err := repo.BulkUpsert(context.Background(), exercises)
@@ -248,7 +248,7 @@ func TestExerciseRepo_List_Search(t *testing.T) {
 	results, _, err := repo.List(context.Background(), filter)
 	require.NoError(t, err)
 	assert.Len(t, results, 1)
-	assert.Equal(t, "Bench Press", results[0].Name)
+	assert.Equal(t, "Bench Press", results[0].NameByLang["en"])
 }
 
 func TestExerciseRepo_List_SearchDescription(t *testing.T) {
@@ -258,8 +258,8 @@ func TestExerciseRepo_List_SearchDescription(t *testing.T) {
 	repo := NewExerciseRepository(tdb.DB)
 
 	exercises := []*domain.Exercise{
-		{ID: uuid.New(), Name: "Bench Press", Description: "Compound chest exercise", MuscleGroup: "chest", Difficulty: "beginner"},
-		{ID: uuid.New(), Name: "Squat", Description: "Compound leg exercise", MuscleGroup: "legs", Difficulty: "beginner"},
+		{ID: uuid.New(), NameByLang: map[string]string{"en": "Bench Press"}, DescriptionsByLang: map[string]string{"en": "Compound chest exercise"}, MuscleGroup: "chest", Difficulty: "beginner"},
+		{ID: uuid.New(), NameByLang: map[string]string{"en": "Squat"}, DescriptionsByLang: map[string]string{"en": "Compound leg exercise"}, MuscleGroup: "legs", Difficulty: "beginner"},
 	}
 
 	err := repo.BulkUpsert(context.Background(), exercises)
@@ -269,7 +269,7 @@ func TestExerciseRepo_List_SearchDescription(t *testing.T) {
 	results, _, err := repo.List(context.Background(), filter)
 	require.NoError(t, err)
 	assert.Len(t, results, 1)
-	assert.Equal(t, "Bench Press", results[0].Name)
+	assert.Equal(t, "Bench Press", results[0].NameByLang["en"])
 }
 
 func TestExerciseRepo_List_EmptyResult(t *testing.T) {

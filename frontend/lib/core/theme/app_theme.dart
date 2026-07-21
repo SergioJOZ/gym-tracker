@@ -128,3 +128,38 @@ abstract final class AppTheme {
     ),
   );
 }
+
+/// Centralized motion tokens and the single reduced-motion gate.
+///
+/// All motion components MUST consume durations/curves from here and MUST
+/// consult [disabled] (or [resolve]) before animating. Raw `Duration` or
+/// curve literals in feature code are disallowed by the `ui-motion` spec.
+abstract final class MotionTokens {
+  static const Duration fast = Duration(milliseconds: 150);
+  static const Duration medium = Duration(milliseconds: 250);
+  static const Duration slow = Duration(milliseconds: 400);
+
+  /// Per-item stagger delay for list entrance animations.
+  static const Duration stagger = Duration(milliseconds: 40);
+
+  /// Subtle spring curve for press feedback and bar entrance.
+  static const Curve spring = Curves.easeOutBack;
+
+  /// Default ease for crossfades and general transitions.
+  static const Curve standard = Curves.easeOutCubic;
+
+  /// Single reduced-motion gate. Returns true when the platform requested
+  /// `disableAnimations` or `accessibleNavigation`. Returns false when no
+  /// [MediaQuery] is available (no ancestor context).
+  static bool disabled(BuildContext context) {
+    final mq = MediaQuery.maybeOf(context);
+    if (mq == null) return false;
+    return mq.disableAnimations || mq.accessibleNavigation;
+  }
+
+  /// Returns [duration] clamped to [Duration.zero] when reduced-motion is
+  /// active. Otherwise returns [duration] unchanged.
+  static Duration resolve(BuildContext context, Duration duration) {
+    return disabled(context) ? Duration.zero : duration;
+  }
+}

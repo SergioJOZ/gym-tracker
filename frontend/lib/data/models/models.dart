@@ -7,15 +7,28 @@ library;
 
 /// An exercise in the catalog.
 class Exercise {
-  final String name;
+  final String id;
+  final Map<String, String> nameByLang;
+
+  /// English name (shorthand for [nameByLang] access).
+  String get name => nameByLang['en'] ?? '';
+
   final String muscleGroup;
   final String equipment;
 
   const Exercise({
-    required this.name,
+    required this.id,
+    required this.nameByLang,
     required this.muscleGroup,
     required this.equipment,
   });
+
+  factory Exercise.fromJson(Map<String, dynamic> json) => Exercise(
+    id: json['id'] as String,
+    nameByLang: Map<String, String>.from(json['name_by_lang'] as Map),
+    muscleGroup: json['muscle_group'] as String? ?? '',
+    equipment: json['equipment'] as String? ?? '',
+  );
 }
 
 /// An exercise slot inside a routine, with its target scheme.
@@ -40,6 +53,9 @@ class RoutineExercise {
 
 /// A saved workout routine.
 class Routine {
+  /// Stable unique identifier used as the Hero tag for shared-element
+  /// transitions to [RoutineDetailScreen]. MUST be non-empty.
+  final String id;
   final String name;
   final List<RoutineExercise> exercises;
 
@@ -48,11 +64,48 @@ class Routine {
   final int estimatedMinutes;
 
   const Routine({
+    required this.id,
     required this.name,
     required this.exercises,
     required this.lastPerformedLabel,
     required this.estimatedMinutes,
   });
+
+  Routine copyWith({
+    String? id,
+    String? name,
+    List<RoutineExercise>? exercises,
+    String? lastPerformedLabel,
+    int? estimatedMinutes,
+  }) {
+    return Routine(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      exercises: exercises ?? this.exercises,
+      lastPerformedLabel: lastPerformedLabel ?? this.lastPerformedLabel,
+      estimatedMinutes: estimatedMinutes ?? this.estimatedMinutes,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Routine &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          exercises == other.exercises &&
+          lastPerformedLabel == other.lastPerformedLabel &&
+          estimatedMinutes == other.estimatedMinutes;
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        name,
+        exercises,
+        lastPerformedLabel,
+        estimatedMinutes,
+      );
 }
 
 /// A single set inside an active workout. Mutable on purpose: kg, reps and

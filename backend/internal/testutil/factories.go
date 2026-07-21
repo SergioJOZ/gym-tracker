@@ -22,13 +22,13 @@ func NewUser() *domain.User {
 // NewExercise creates a new Exercise with random data for testing.
 func NewExercise() *domain.Exercise {
 	return &domain.Exercise{
-		ID:          uuid.New(),
-		Name:        fmt.Sprintf("Exercise-%s", uuid.New().String()[:8]),
-		Description: "Test exercise description",
-		MuscleGroup: "chest",
-		Equipment:   "barbell",
-		Difficulty:  "intermediate",
-		Category:    "strength",
+		ID:                 uuid.New(),
+		NameByLang:         map[string]string{"en": fmt.Sprintf("Exercise-%s", uuid.New().String()[:8])},
+		DescriptionsByLang: map[string]string{"en": "Test exercise description"},
+		MuscleGroup:        "chest",
+		Equipment:          "barbell",
+		Difficulty:         "intermediate",
+		Category:           "strength",
 	}
 }
 
