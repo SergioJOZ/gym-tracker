@@ -1,0 +1,55 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Go 1.26.4 backend, PostgreSQL, Docker (planned), Flutter frontend (pending)
+  Architecture: Clean/Hexagonal (cmd/api, internal/{domain,handler,usecase,repository,middlewares}, pkg/)
+  Testing: go test -race -cover (Makefile), no test files yet
+  Style: Standard Go conventions, golangci-lint (configured in Makefile, not installed)
+
+strict_tdd: true
+
+testing:
+  runner: go test -race -cover ./...
+  layers:
+    unit: true
+    integration: false
+    e2e: false
+  coverage:
+    available: true
+    command: go test -cover ./...
+  quality:
+    linter:
+      available: false
+      command: golangci-lint run ./...
+      note: golangci-lint not installed on system
+    formatter:
+      available: true
+      command: go fmt ./...
+    type_checker:
+      available: true
+      command: go vet ./...
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Consider multi-tenant implications (future gym/coach/client model)
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Follow clean architecture boundaries (domain -> usecase -> handler -> repository)
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    - Follow existing code patterns
+    tdd: true
+    test_command: go test -race -cover ./...
+  verify:
+    test_command: go test -race -cover ./...
+    build_command: go build -o bin/gym-tracker ./cmd/api
+    coverage_threshold: 80
+  archive:
+    - Warn before merging destructive deltas
